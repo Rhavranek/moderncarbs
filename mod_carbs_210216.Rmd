@@ -1,8 +1,8 @@
 ---
 title: "Modern carbonate samples"
-subtitle: "Run 1"
+subtitle: "Run 2"
 analyst: "Rachel Havranek"
-run date: "01/27/2022"
+run date: "02/16/2022"
 output:
   html_document: 
     df_print: paged
@@ -13,24 +13,24 @@ output:
     toc_float: true
     toc_depth: 3
     code_folding: show
-editor_options:
-  chunk_output_type: inline
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Summary of data reduction and run:
 
-Rachel add in a description of how the run went:
-- This was my first gasbench run, broadly went poorly
-- I really mucked up my standards somehow. They were all wildly out of order. See the wild re-ordering block below
+Run description:
+* on the sequence I didn't have 11 or 43 in the AS sample column, so everything after 10 was **offset**
 
-There were three samples that had data come out of it: S75, B105, O95
-There were four samples had did not have usable data (large stdev): S83, S100, B50, O75
+
+
 
 Precision on the scale corrections were +/ x.xxx permil (d13C) and +/- x.xxx permil (d18O). All analyses (samples = sa, standards = st) culled are listed below (see output file for details on culling):
 
 Examples:
-- Analysis 22995, CU YULE, monitoriing standard, very low yield, large atm. peaks
-- Analysis 23009, IAEA-C2, drift standard, very low yield, large atm. peaks 
+-23325, IAEA C2, mass 47 -> the cap was askew when I pulled it out of the gasbench. Does fine in carbon space, but is an outlier (-5 per mil in oxygen space). Had a surprisingly good yield. had large atm peaks 
+
+-
 
 - xxxx - major outlier in d13C and d18O; exact reason not clear (st)
 - xxxx - yield problem; too small and so had high between peak stdevs (st)
@@ -60,7 +60,7 @@ library(isoprocessCUBES) #if loading this package for the first time, be sure to
 rawfiles.directory<- file.path(".")  #enter the name of your raw data folder here; should be in the same directory as your .Rproj file
 
 session<-"REH_modcarbs"  #update this to name your own session
-Run <- "1"
+Run <- "2"
 
 dxf_files<-iso_read_continuous_flow(rawfiles.directory,read_vendor_data_table = TRUE,quiet = T) #reads in raw data files and extracts necessary data
 dxf_files <- iso_omit_files_with_problems(dxf_files)
@@ -80,57 +80,24 @@ raw.data <- dxf_data %>%
          Area44 = `Intensity 44`) %>%    
   #changes mass data type to numeric data instead of character
   mutate(mass = as.numeric(mass), row = as.numeric(row))  %>%
-  #if needed, make specific changes in individual cells; comment out if not needed; this example removes a space of some of the entries for "sample" so they are all the same
-  mutate(#type = str_replace(type, "sampled", "mon.std"),
-         `Identifier1` = ifelse(`Identifier1`== "YULE", "CU YULE", `Identifier1`),
-          Identifier1 = ifelse(Analysis== 20302, "CU YULE", Identifier1),
-          Identifier1 = ifelse(Analysis== 20303, "IAEA-603", Identifier1),
-          Identifier1 = ifelse(Analysis== 20304, "Merck", Identifier1),
-         
-          Identifier1 = ifelse(Analysis == 22992, "IAEA-C2", Identifier1),
-          type = ifelse(Analysis== 22992, "drift.std", type),
-          Identifier1 = ifelse(Analysis == 22993, "USGS44", Identifier1),
-          type = ifelse(Analysis== 22993, "dis2.std", type),
-          Identifier1 = ifelse(Analysis == 22994, "NBS18", Identifier1),
-          type = ifelse(Analysis== 22994, "dis.std", type),
-          Identifier1 = ifelse(Analysis == 22995, "CU YULE", Identifier1),
-          type = ifelse(Analysis== 22995, "mon.std", type),
-          
-          Identifier1 = ifelse(Analysis == 23006, "NBS18", Identifier1),
-          type = ifelse(Analysis== 23006, "dis.std", type),
-          Identifier1 = ifelse(Analysis == 23007, "CU YULE", Identifier1),
-          type = ifelse(Analysis== 23007, "mon.std", type),
-          Identifier1 = ifelse(Analysis == 23008, "USGS44", Identifier1),
-          type = ifelse(Analysis== 23008, "dis2.std", type),
-          Identifier1 = ifelse(Analysis == 23009, "IAEA-C2", Identifier1),
-          type = ifelse(Analysis== 23009, "drift.std", type),
-         
-          Identifier1 = ifelse(Analysis == 23018, "IAEA-C2", Identifier1),
-          type = ifelse(Analysis== 23018, "drift.std", type),
-          Identifier1 = ifelse(Analysis == 23019, "USGS44", Identifier1),
-          type = ifelse(Analysis== 23019, "dis2.std", type),
-          Identifier1 = ifelse(Analysis == 23020, "NBS18", Identifier1),
-          type = ifelse(Analysis== 23020, "dis.std", type),
-          Identifier1 = ifelse(Analysis == 23021, "CU YULE", Identifier1),
-          type = ifelse(Analysis== 23021, "mon.std", type),
-         
-         Identifier1 = ifelse(Analysis == 23022, "O95_whole", Identifier1),
-          type = ifelse(Analysis== 23022, "sample", type),
-         
-         ) 
-  
+  filter(file_datetime > "2022-02-05")
+# 
+#   #if needed, make specific changes in individual cells; comment out if not needed; this example removes a space of some of the entries for "sample" so they are all the same
+
+
 #another way to change miss labeled or typos
 #updating name and mass for 2 swapped standards (based on their isotope values and adjacent positions)
-raw.data[  raw.data$Analysis == 9100, "Identifier1"] <- "HIS"
-raw.data[  raw.data$Analysis == 9100, "mass"] <- 99
-raw.data[  raw.data$Analysis == 9101, "Identifier1"] <- "NBS18"
-raw.data[  raw.data$Analysis == 9101, "mass"] <- 96
+#raw.data[  raw.data$Analysis == 9100, "Identifier1"] <- "HIS"
+#raw.data[  raw.data$Analysis == 23328, "mass"] <- 208
+#raw.data[  raw.data$Analysis == 9101, "Identifier1"] <- "NBS18"
+#raw.data[  raw.data$Analysis == 23329, "mass"] <- 155
 ```
 
 ## define standards and standard values
 ```{r define-stnds}
 #input all standard values in PDB mineral values; be sure to adjust for YOUR standards
 Standards <- readRDS(url("https://github.com/cubessil/clumpsDRcodes/blob/master/Standards.RDS?raw=true"))
+
 
  corr.std<-"IAEA-C2"  #enter your standard names here
  dis2.std<-"USGS44"
@@ -216,20 +183,29 @@ sd.v.area44<-ggplot(stdev, aes(x=area44, y=stdev, fill=factor(num.peaks))) +
 
 multiplot(sd.values, sd.hist, sd.box, sd.v.area44, cols=1)
 ```
+*WHAT TO LOOK FOR*
 - stdev vs. area44 plots show a link between how much gas there was and how well it ran. 
 - if its standards that didn't run well in addition to samples - then need to chase down another problem
 - oxygen lately isn't running as well 
 - stop and do maintenance on gasbench? 
 - histogram looking for normal distribution around a 'normal' stdev
+- go back and look at vials right after the run (next day) -> can help pinpoint yield problems. 
 
--- go back and look at vials right after the run (next day) -> can help pinpoint yield problems. 
+*NOTES*
+1. Oxygen is far more symmetrical than carbon.
+1. Oxygen's SD is about the same as carbon's - that's good!
+1. There's still a strong population of small samples 
+
+
+
+
 
 
 
 Remove major outliers based on large standard deviation of peaks, then redo plots - also, adds culled data to "culled data" tab that shows samples and standards that shouldn't be used
 ```{r cull.outliers.1, fig.width=10, fig.height=15}
 #adjust line 121: change the value of d18O.sd.cutoff to match the cutoff of outliers based on the previous plots; default is 0.1
-d18O.sd.cutoff <- 0.3
+d18O.sd.cutoff <- 0.25
 
 culled.data <- bind_rows(culled.data, subset(data, d18O.sd>d18O.sd.cutoff))
 wo.culled <- subset(data, d18O.sd<d18O.sd.cutoff)
@@ -262,6 +238,10 @@ sd.v.area44<-ggplot(stdev, aes(x=area44, y=stdev, fill=factor(num.peaks))) +
 multiplot(sd.values, sd.hist, sd.v.area44, sd.box, cols=1)
 ```
 
+* this cut off got rid of the oxygen outliers, but not the one carbon outlier (st dev = 0.35)
+* the stdev median is 0.12 for carbon and 0.13 for oxygen (back to being pretty much the same)
+
+
 ## Calculate and plot yields
 Plot yields of all samples and standards, as well as just the standards, using INTERACTIVE plots. Look for major outliers that coincide with yield problems.
 Note that the linear model in the yield.stds figure here is based on ALL the standard data
@@ -272,13 +252,22 @@ Check to see that samples all fall within linearity range, and for any other obv
 
 ```{r cull.outliers.2, fig.width=10, fig.height=7}
 # adjust next line only: change #'s in stds.to.cull to reflect the row #'s that need to be culled, add row#'s as needed and rerun after looking at the new plots
-stds.to.cull <- c(22995, 23009) # #Analysis #s with yield problem and/or significant outlier in d13C or d18O, including samples smaller than linearity range that weren't caught by other culling steps
+stds.to.cull <- c(23325, 23333) # #Analysis #s with yield problem and/or significant outlier in d13C or d18O, including samples smaller than linearity range that weren't caught by other culling steps
                     
 stds.culled <- filter(stds1, Analysis %in% stds.to.cull)
 stds <- filter(stds1, !Analysis %in% stds.to.cull) 
 culled.data<-bind_rows(culled.data, stds.culled)
 
 stds<- data.frame(stds, cbind(predict.lm(lm(stds$area44 ~ stds$mass), interval=c("confidence"), level=0.95)))
+
+std_values <- stds %>% 
+  ggplot()+
+  aes(x = d18O.raw, y = d13C.raw, fill = Identifier1, size =2, text = Analysis)+
+  geom_point()
+
+ggplotly(std_values, dynamicTicks = TRUE)
+
+
 
 yield.all<-ggplot(data, aes(x=mass, y=area44, fill=type, label=Analysis)) +
   geom_point(size=3, shape=22) +
