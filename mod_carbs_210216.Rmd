@@ -111,18 +111,18 @@ Standardsforthisrun <- tibble(
       select(std.type, std.name, d13C, d18O )
   
 C.stds.table <- Standardsforthisrun %>% 
-   select(std.type, std.name, d13C)
+   select(std.type, std.name, d13C) %>% 
+    rename(C.acc = d13C)
  
 O.stds.table <- Standardsforthisrun %>% 
-  select(!"d13C")
+  select(!"d13C") %>% 
+  rename(O.acc = d18O)
 
 
 #if you run just the code above it matches the tables as below. However at some point in the code it looks for C.acc and O.acc as a variable not from a table.
 #if I add the below code it fixes it but as you can guess this is not ideal  
-C.acc <-  C.stds.table %>% filter(std.name == corr.std)
-C.acc <- C.acc$C.acc 
-O.acc <-  O.stds.table %>% filter(std.name == corr.std)
-O.acc <- O.acc$O.acc 
+C.acc <-  C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc)
+O.acc <-  O.stds.table %>% filter(std.name == corr.std) %>% select(O.acc)
 ```
 
 
@@ -405,9 +405,8 @@ offsetC<-subset(stds, Identifier1==corr.std)
 (offsetC.mean<-mean(offsetC$d13C.raw))
 (offsetC.sd<-sd(offsetC$d13C.raw))
 
-offsetC$d13C.offset <- offsetC$d13C.raw +  (C.stds.table %>% filter(std.type == corr.std) - offsetC.mean
+offsetC$d13C.offset <- offsetC$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - offsetC.mean)
   
-  C.acc - offsetC.mean)
 
 (offsetcorrC.mean<-mean(offsetC$d13C.offset))
 (offsetcorrC.sd<-sd(offsetC$d13C.offset))
@@ -438,8 +437,8 @@ Assess effects: Apply offset correction to the whole dataset of raw values, and 
 ```{r apply.offset.corr.C, fig.width=10, fig.height=5}
 
 #apply offset correction to whole dataset
-data$d13C.offset <- data$d13C.raw +  (C.acc - offsetC.mean)
-stds$d13C.offset <- stds$d13C.raw +  (C.acc - offsetC.mean)
+data$d13C.offset <- data$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - offsetC.mean)
+stds$d13C.offset <- stds$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - offsetC.mean)
 
 #make monitoring standard dataset and dataset for additional standards used later for discrimination correction
 offsetC.mon <- subset(stds, Identifier1==mon.std)
@@ -481,7 +480,7 @@ drift.slopeC<-(coef(lm(as.numeric(driftC$d13C.raw) ~ driftC$row))[[2]])
 drift.interC<-(coef(lm(as.numeric(driftC$d13C.raw) ~ driftC$row))[[1]])
 
 #drift check
-driftC$d13C.drift<- driftC$d13C.raw + (C.acc - (drift.slopeC * driftC$row + drift.interC))
+driftC$d13C.drift<- driftC$d13C.raw + (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (drift.slopeC * driftC$row + drift.interC))
 
 (driftC.mean<-mean(driftC$d13C.drift))
 (driftC.sd<-sd(driftC$d13C.drift))
@@ -514,8 +513,8 @@ Is there visible drift? sloped line? no slope?
 
 Assess effects: Apply drift correction to the whole dataset of raw values, and check the monitoring standards
 ```{r apply.drift.corr.C, fig.width=10, fig.height=5}
-data$d13C.drift <- data$d13C.raw +  (C.acc - (drift.slopeC * data$row + drift.interC))
-stds$d13C.drift <- stds$d13C.raw +  (C.acc - (drift.slopeC * stds$row + drift.interC))
+data$d13C.drift <- data$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (drift.slopeC * data$row + drift.interC))
+stds$d13C.drift <- stds$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (drift.slopeC * stds$row + drift.interC))
 
 driftC.mon<-subset(stds, Identifier1==mon.std)
 driftC.dis <- subset(stds, Identifier1==dis.std)
@@ -557,7 +556,7 @@ lin.slopeC<-(coef(lm(linC$d13C.raw ~ linC$inv.area44))[[2]])
 lin.interC<-(coef(lm(linC$d13C.raw ~ linC$inv.area44))[[1]])
 
 #linearity check
-linC$d13C.lin<-linC$d13C.raw + (C.acc - (lin.slopeC * linC$inv.area44 + lin.interC))
+linC$d13C.lin<-linC$d13C.raw + (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (lin.slopeC * linC$inv.area44 + lin.interC))
 
 (linC.mean<-mean(linC$d13C.lin))
 (linC.sd<-sd(linC$d13C.lin))
@@ -594,8 +593,8 @@ multiplot(C.lin.area44, C.lincorr.invarea, C.lin.mass, cols=3)
 Assess effects: Apply linearity correction to the whole dataset of raw values, and check the monitoring standards
 ```{r apply.lin.corr.C, fig.width=10, fig.height=5}
 
-data$d13C.lin <- data$d13C.raw +  (C.acc - (lin.slopeC * data$inv.area44 + lin.interC))
-stds$d13C.lin <- stds$d13C.raw +  (C.acc - (lin.slopeC * stds$inv.area44 + lin.interC))
+data$d13C.lin <- data$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (lin.slopeC * data$inv.area44 + lin.interC))
+stds$d13C.lin <- stds$d13C.raw +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (lin.slopeC * stds$inv.area44 + lin.interC))
 
 linC.mon<-subset(stds, Identifier1==mon.std)
 linC.dis<-subset(stds, Identifier1==dis.std)
@@ -638,7 +637,7 @@ lindrift.slopeC<-(coef(lm(lindriftC$d13C.lin ~ lindriftC$row))[[2]])
 lindrift.interC<-(coef(lm(lindriftC$d13C.lin ~ lindriftC$row))[[1]])
 
 #drift check
-lindriftC$d13C.lindrift<- lindriftC$d13C.lin + (C.acc - (lindrift.slopeC * lindriftC$row + lindrift.interC))
+lindriftC$d13C.lindrift<- lindriftC$d13C.lin + (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (lindrift.slopeC * lindriftC$row + lindrift.interC))
 
 (lindriftC.mean<-mean(lindriftC$d13C.drift))
 (lindriftC.sd<-sd(lindriftC$d13C.drift))
@@ -670,8 +669,8 @@ multiplot(C.lindrift, C.lindrift.mass, cols=2)
 
 Assess effects: Apply drift correction to the whole dataset of linearity corrected values, and check the monitoring standards
 ```{r apply.lindrift.corr.C, fig.width=10, fig.height=5}
-data$d13C.lindrift <- data$d13C.lin +  (C.acc - (lindrift.slopeC * data$row + lindrift.interC))
-stds$d13C.lindrift <- stds$d13C.lin +  (C.acc - (lindrift.slopeC * stds$row + lindrift.interC))
+data$d13C.lindrift <- data$d13C.lin +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (lindrift.slopeC * data$row + lindrift.interC))
+stds$d13C.lindrift <- stds$d13C.lin +  (C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc) - (lindrift.slopeC * stds$row + lindrift.interC))
 
 lindriftC.mon<-subset(stds, Identifier1==mon.std)
 lindriftC.dis<-subset(stds, Identifier1==dis.std)
