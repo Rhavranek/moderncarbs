@@ -98,19 +98,24 @@ raw.data <- dxf_data %>%
 #input all standard values in PDB mineral values; be sure to adjust for YOUR standards
 Standards <- readRDS(url("https://github.com/cubessil/clumpsDRcodes/blob/master/Standards.RDS?raw=true"))
 
+corr.std<-"IAEA-C2"  #enter your standard names here
+dis2.std<-"USGS44"
+dis.std<-"NBS18"
+mon.std<-"CU YULE"
 
- corr.std<-"IAEA-C2"  #enter your standard names here
- dis2.std<-"USGS44"
- dis.std<-"NBS18"
- mon.std<-"CU YULE"
+Standardsforthisrun <- tibble(
+   std.type = as.ordered(c("corr.std", "dis2.std", "dis.std", "mon.std")),
+   Sample.ID = as.ordered(c(corr.std, dis2.std, dis.std, mon.std)),
+   std.name = as.ordered(c(corr.std, dis2.std, dis.std, mon.std)))  %>% 
+    inner_join(Standards, by = "Sample.ID") %>% 
+      select(std.type, std.name, d13C, d18O )
+  
+C.stds.table <- Standardsforthisrun %>% 
+   select(std.type, std.name, d13C)
+ 
+O.stds.table <- Standardsforthisrun %>% 
+  select(!"d13C")
 
- Standardsforthisrun <- Standards %>% select(Sample.ID, d13C,d18O) %>% filter(Sample.ID %in% c(corr.std, mon.std, dis.std, dis2.std)) %>%  
-   rename("std.name"= Sample.ID,
-          "C.acc" = d13C,
-          "O.acc" = d18O)
-
- C.stds.table <- Standardsforthisrun %>% select(std.name, C.acc)
- O.stds.table <- Standardsforthisrun %>% select(std.name, O.acc)
 
 #if you run just the code above it matches the tables as below. However at some point in the code it looks for C.acc and O.acc as a variable not from a table.
 #if I add the below code it fixes it but as you can guess this is not ideal  
@@ -376,7 +381,7 @@ data$target.wgt.ug <-  110/(data$PercentCO3/100)
 ## Calculate raw data means
 ```{r calc.raw.means.C}
 
-raw.corr <- filter(stds, Identifier1==corr.std)
+raw.corr <- filter(stds, type == "drift.std" | type == "lin.std")
 raw.mon <- filter(stds, type=="mon.std")
 raw.dis <- filter(stds, type=="dis.std")
 raw.dis2 <- filter(stds, type=="dis2.std")
@@ -400,7 +405,9 @@ offsetC<-subset(stds, Identifier1==corr.std)
 (offsetC.mean<-mean(offsetC$d13C.raw))
 (offsetC.sd<-sd(offsetC$d13C.raw))
 
-offsetC$d13C.offset <- offsetC$d13C.raw +  (C.acc - offsetC.mean)
+offsetC$d13C.offset <- offsetC$d13C.raw +  (C.stds.table %>% filter(std.type == corr.std) - offsetC.mean
+  
+  C.acc - offsetC.mean)
 
 (offsetcorrC.mean<-mean(offsetC$d13C.offset))
 (offsetcorrC.sd<-sd(offsetC$d13C.offset))
