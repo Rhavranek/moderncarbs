@@ -81,6 +81,27 @@ raw.data <- dxf_data %>%
   #changes mass data type to numeric data instead of character
   mutate(mass = as.numeric(mass), row = as.numeric(row))  %>%
   filter(file_datetime > "2022-02-05")
+
+data2<-data
+for (ID in c(18364:18359)){
+  ID2 <- ID-1
+  data[ data2$Analysis == ID , "Identifier1"] <- data[ data$Analysis == ID2 , "Identifier1"]
+  data[ data2$Analysis == ID , "mass"] <- data[ data$Analysis == ID2 , "mass"]
+  data[ data2$Analysis == ID , "carousel"] <- data[ data$Analysis == ID2 , "carousel"]
+  data[ data2$Analysis == ID , "type"] <- data[ data$Analysis == ID2 , "type"]
+  }
+
+
+
+ for (ID in c(18364:18359)){
+  ID2 <- ID-1
+  data[ data$Analysis == ID , "Identifier1"] <- data[ data$Analysis == ID2 , "Identifier1"]
+  data[ data$Analysis == ID , "mass"] <- data[ data$Analysis == ID2 , "mass"]
+  data[ data$Analysis == ID , "carousel"] <- data[ data$Analysis == ID2 , "carousel"]
+  data[ data$Analysis == ID , "type"] <- data[ data$Analysis == ID2 , "type"]
+ }
+
+
 # 
 #   #if needed, make specific changes in individual cells; comment out if not needed; this example removes a space of some of the entries for "sample" so they are all the same
 
