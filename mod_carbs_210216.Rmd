@@ -121,8 +121,8 @@ O.stds.table <- Standardsforthisrun %>%
 
 #if you run just the code above it matches the tables as below. However at some point in the code it looks for C.acc and O.acc as a variable not from a table.
 #if I add the below code it fixes it but as you can guess this is not ideal  
-C.acc <-  C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc)
-O.acc <-  O.stds.table %>% filter(std.name == corr.std) %>% select(O.acc)
+C.acc.corr <-  C.stds.table %>% filter(std.name == corr.std) %>% select(C.acc)
+O.acc.corr <-  O.stds.table %>% filter(std.name == corr.std) %>% select(O.acc)
 ```
 
 
