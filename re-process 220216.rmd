@@ -1,8 +1,8 @@
 ---
 title: "Modern Carbonates"
-subtitle: "Run X"
+subtitle: "Run 2"
 analyst: "Rachel Havranek "
-run date: "01/20/2022"
+run date: "02/16/2022"
 output:
   html_document: 
     df_print: paged
@@ -14,7 +14,7 @@ output:
     toc_depth: 3
     code_folding: show
 editor_options:
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 # Summary of data reduction and run:
@@ -91,6 +91,7 @@ raw.data <- dxf_data %>%
 ```
 
 ## define standards and standard values
+corr.std here is labeled drift and linearity in the run list  
 ```{r define-stnds}
 #input all standard values in PDB mineral values; be sure to adjust for YOUR standards
 Standards <- readRDS(url("https://github.com/cubessil/clumpsDRcodes/blob/master/Standards.RDS?raw=true"))
@@ -159,6 +160,8 @@ for (ID in 23366:23359){
   }
 ```
 
+
+
 ```{r}
 culled.data <- raw.data %>% 
   group_by(row, file_id, Analysis, Identifier1, mass, type) %>% 
@@ -173,9 +176,6 @@ data3$d18O.raw <- (data3$d18O.raw.SMOW - 41.43)/1.04143 #d18O output is CO2 SMOW
 stdev <- gather(filter(data3, num.peaks > 1, d18O.sd < 100), key = "isotope",
               value = "stdev", d13C.sd, d18O.sd)
 ```
-
-
-
 
 
 
@@ -254,7 +254,7 @@ Check to see that samples all fall within linearity range, and for any other obv
 
 ```{r cull.outliers.2, fig.width = 10, fig.height = 7}
 # adjust next line only: change #'s in stds.to.cull to reflect the row #'s that need to be culled, add row#'s as needed and rerun after looking at the new plots
-stds.to.cull <- c(NA) # #Analysis #s with yield problem and/or significant outlier in d13C or d18O, including samples smaller than linearity range that weren't caught by other culling steps
+stds.to.cull <- c(23325) # #Analysis #s with yield problem and/or significant outlier in d13C or d18O, including samples smaller than linearity range that weren't caught by other culling steps
                     
 stds.culled <- filter(stds1, Analysis %in% stds.to.cull)
 stds <- filter(stds1, !Analysis %in% stds.to.cull) 
@@ -337,9 +337,9 @@ yield.line <- lm(stds$mass ~ stds$area44)
 (yield.slope <- coef(yield.line)[[2]])
 (yield.intercept <- coef(yield.line)[[1]])
 
-data$PercentCO3 <- ((yield.slope * data$area44 + yield.intercept)/data$mass *100)
+data3$PercentCO3 <- ((yield.slope * data3$area44 + yield.intercept)/data3$mass *100)
 
-data$target.wgt.ug <-  90/(data$PercentCO3/100)
+data3$target.wgt.ug <-  90/(data3$PercentCO3/100)
 ```
 
 # Carbon corrections
@@ -398,7 +398,7 @@ Assess effects: Apply offset correction to the whole dataset of raw values, and 
 ```{r apply.offset.corr.C, fig.width = 10, fig.height = 5}
 
 #apply offset correction to whole dataset
-data$d13C.offset <- data$d13C.raw + (filter(C.stds.table, std.type == "corr.std")$C.acc - offsetC.mean)
+data3$d13C.offset <- data3$d13C.raw + (filter(C.stds.table, std.type == "corr.std")$C.acc - offsetC.mean)
 stds$d13C.offset <- stds$d13C.raw + (filter(C.stds.table, std.type == "corr.std")$C.acc - offsetC.mean)
 
 #make monitoring standard dataset and dataset for additional standards used later for discrimination correction
@@ -480,7 +480,7 @@ multiplot(C.drift, C.drift.mass, cols = 2)
 
 Assess effects: Apply drift correction to the whole dataset of raw values, and check the monitoring standards
 ```{r apply.drift.corr.C, fig.width = 10, fig.height = 5}
-data$d13C.drift <- data$d13C.raw + (filter(C.stds.table, std.type == "corr.std")$C.acc - (drift.slopeC * data$row + drift.interC))
+data3$d13C.drift <- data3$d13C.raw + (filter(C.stds.table, std.type == "corr.std")$C.acc - (drift.slopeC * data3$row + drift.interC))
 stds$d13C.drift <- stds$d13C.raw + (filter(C.stds.table, std.type == "corr.std")$C.acc - (drift.slopeC * stds$row + drift.interC))
 
 driftC.mon <- filter(stds, type == "mon.std")
@@ -564,7 +564,7 @@ multiplot(C.lin.area44, C.lincorr.invarea, C.lin.mass, cols=3)
 Assess effects: Apply linearity correction to the whole dataset of raw values, and check the monitoring standards
 ```{r apply.lin.corr.C, fig.width = 10, fig.height = 5}
 
-data$d13C.lin <- data$d13C.raw +  (filter(C.stds.table, std.type == "corr.std")$C.acc - (lin.slopeC * data$inv.area44 + lin.interC))
+data3$d13C.lin <- data3$d13C.raw +  (filter(C.stds.table, std.type == "corr.std")$C.acc - (lin.slopeC * data3$inv.area44 + lin.interC))
 stds$d13C.lin <- stds$d13C.raw +  (filter(C.stds.table, std.type == "corr.std")$C.acc - (lin.slopeC * stds$inv.area44 + lin.interC))
 
 linC.mon <- filter(stds, type == "mon.std")
@@ -602,7 +602,7 @@ multiplot(C.mon.lin, C.mon.lin.mass, cols = 2)
 Because a run can be affected by both drift and linearity, here we assess the affects of apply both the linearity and drift corrections to the raw data. This uses the linearity corrected values, and looks at the drift in those values
 ```{r lindrift.C, fig.width=10, fig.height=5}
 
-lindriftC <- merge(driftC, data[c("row", "d13C.lin")], by.x = "row", by.y = "row", all.x = TRUE, all.y = FALSE, sort = FALSE)
+lindriftC <- merge(driftC, data3[c("row", "d13C.lin")], by.x = "row", by.y = "row", all.x = TRUE, all.y = FALSE, sort = FALSE)
 
 lindrift.slopeC <- (coef(lm(lindriftC$d13C.lin ~ lindriftC$row))[[2]])
 lindrift.interC <- (coef(lm(lindriftC$d13C.lin ~ lindriftC$row))[[1]])
@@ -644,7 +644,7 @@ multiplot(C.lindrift, C.lindrift.mass, cols = 2)
 
 Assess effects: Apply drift correction to the whole dataset of linearity corrected values, and check the monitoring standards
 ```{r apply.lindrift.corr.C, fig.width = 10, fig.height = 5}
-data$d13C.lindrift <- data$d13C.lin +  (filter(C.stds.table, std.type == "corr.std")$C.acc - (lindrift.slopeC * data$row + lindrift.interC))
+data3$d13C.lindrift <- data3$d13C.lin +  (filter(C.stds.table, std.type == "corr.std")$C.acc - (lindrift.slopeC * data3$row + lindrift.interC))
 stds$d13C.lindrift <- stds$d13C.lin +  (filter(C.stds.table, std.type == "corr.std")$C.acc - (lindrift.slopeC * stds$row + lindrift.interC))
 
 lindriftC.mon <- filter(stds, type == "mon.std")
@@ -701,7 +701,7 @@ scale.corr <- left_join(scale.stds, C.scale.stds, by = "std.name") %>%
   rename(d13C = col_in_data)
 
 # safety checks
-if (!col_in_data %in% names(data)) stop("this column does not exist in data or stds table: ", col_in_data, call. = FALSE)
+if (!col_in_data %in% names(data3)) stop("this column does not exist in data or stds table: ", col_in_data, call. = FALSE)
 
 # regression
 m <- lm(scale.corr$C.acc ~ scale.corr$d13C)
@@ -712,7 +712,7 @@ S <- summary(m)$sigma
 d13C.error.S <- S
 
 # apply correction
-data <- data %>%
+data3 <- data3 %>%
   mutate_(d13C.scale = lazyeval::interp(~scale.slopeC * var + scale.interC, var = as.name(col_in_data)))
 stds <- stds %>%
   mutate_(d13C.scale = lazyeval::interp(~scale.slopeC * var + scale.interC, var = as.name(col_in_data)))
@@ -720,7 +720,7 @@ stds <- stds %>%
 C.scale.all <- 
   ggplot(scale.corr, aes(x = d13C, y = C.acc)) +
   geom_smooth(method = "lm", color = "blue") +
-  geom_point(data = filter(data, d18O.sd < d18O.sd.cutoff), aes_string(x = col_in_data, y = "d13C.scale"), shape = 23, fill = "red", size = 2) +
+  geom_point(data = filter(data3, d18O.sd < d18O.sd.cutoff), aes_string(x = col_in_data, y = "d13C.scale"), shape = 23, fill = "red", size = 2) +
   geom_point(shape = 21, fill = "blue", size = 2) +
   geom_text(
            x = max(scale.corr$d13C), 
