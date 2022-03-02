@@ -19,23 +19,30 @@ editor_options:
 
 # Summary of data reduction and run:
 
-XXXX add in a description of how the run went xxxxx
+Precision on the scale corrections were +/ 0.078 permil (d13C) and +/- 0.603 permil (d18O). All analyses (samples = sa, standards = st) culled are listed below (see output file for details on culling):
+- 23325 - The cap was skewed to the side and loose  
 
-Precision on the scale corrections were +/ x.xxx permil (d13C) and +/- x.xxx permil (d18O). All analyses (samples = sa, standards = st) culled are listed below (see output file for details on culling):
+*consider removing (but not removed at this point):*
+-23358 -> CU YULE with a puckered cap & small peaks. No apparent atm 
+-23355 -> IAEA C2 with a mass of 106. The peaks look totally fine. So it was probably just a bad measurement.  
+*Correction Scheme Chosen*  
+For carbon I scale corrected the raw values. There wasn't really any linearity or drift. For oxygen, I considered using the linearity corrected values for the scale correction. Linearity greatly reduced the standard deviation, and was fairly large (m = 2.6). But, I ulitimately decided to use the raw values becuase that minimized SD on the correcting standard, and made no difference to the monitoring standard.  
 
-Examples:
-- xxxx - major outlier in d13C and d18O; exact reason not clear (st)
-- xxxx - yield problem; too small and so had high between peak stdevs (st)
-- xxxx - Sample XXXX; too small; high between peak stdev; 20 peaks so likely atmosphere leak (sa) 
-- xxxx - yield problem; too large and outlier in d13C and d18O (st)
-- xxxx - yield problem; too small; high between peak stdev; 20 peaks so likely atmosphere leak (st)
-- xxxx - major outlier in d13C and d18O; exact reason not clear (st)
-- xxxx - smaller than linearity bracket (sa)
-- xxxx - major outlier in d13C and d18O; exact reason not clear (st)                  
+*Note about how the gasbench was running:*  
+In processing this data, Katie and I found that the area44 for our target wt was smaller than expected. In 2019, during Sarah Widlansky's data run, a mass of 110 micrograms was getting an area44 of 35 - 40. In this dataset, I was getting an area 44 of 13.25 - 21.72, with most between 15 - 20  for the run. I made a plot to show this called std_area44 in chunk 7. 
+  
+**Learned outcomes:**  
+1. Sample S83 probably doesn't have high enough wt percent carbonate to run - all three sub samples < 10% wt% carbonate.  
+2. Briggsdale samples will be the easiest to run early (highest wt % carbonate), but seems very variable   isotopically. Don't forget B19.5 is from 19.5 *INCHES* so its ~49 cm    
+3. Oglala samples are really consistent in carbon space. 15 - 25wt% carbonate  
+4. Seibert is SUCH low wt% carbonate - < 10%. This makes sense with the thin sections  
+
+
+                  
                     
 # Load libraries, data, and define standards
 ## load necessary R libraries and data, define accepted standard values for correcting standards
-```{r load-stuff}
+```{r setup, echo = TRUE, message=FALSE, warning=FALSE}
 #devtools::install_github("isoverse/isoprocessor") 
 
 library(isoprocessor)
@@ -71,18 +78,18 @@ raw.data <- dxf_data %>%
          d18Oraw = `d 18O/16O`,
          Area44 = `Intensity 44`) %>%    
   #changes mass data type to numeric data instead of character
-  mutate(mass = as.numeric(mass), row = as.numeric(row))  %>%
+  mutate(mass = as.numeric(mass), row = as.numeric(row)) # %>%
   #if needed, make specific changes in individual cells; comment out if not needed; this example removes a space of some of the entries for "sample" so they are all the same
-  mutate(#type = str_replace(type, "sampled", "mon.std"),
-         `Identifier1` = ifelse(`Identifier1`== "YULE", "CU YULE", `Identifier1`),
-          Identifier1 = ifelse(Analysis== 20302, "CU YULE", Identifier1),
-          Identifier1 = ifelse(Analysis== 20303, "IAEA-603", Identifier1),
-          Identifier1 = ifelse(Analysis== 20304, "Merck", Identifier1),
-          type = ifelse(Analysis== 20302, "drift.std", type),
-          type = ifelse(Analysis== 20303, "mon.std", type),
-          type = ifelse(Analysis== 20304, "dis2.std", type)
-         
-         ) 
+  # mutate(#type = str_replace(type, "sampled", "mon.std"),
+  #        `Identifier1` = ifelse(`Identifier1`== "YULE", "CU YULE", `Identifier1`),
+  #         Identifier1 = ifelse(Analysis== 20302, "CU YULE", Identifier1),
+  #         Identifier1 = ifelse(Analysis== 20303, "IAEA-603", Identifier1),
+  #         Identifier1 = ifelse(Analysis== 20304, "Merck", Identifier1),
+  #         type = ifelse(Analysis== 20302, "drift.std", type),
+  #         type = ifelse(Analysis== 20303, "mon.std", type),
+  #         type = ifelse(Analysis== 20304, "dis2.std", type)
+  #        
+  #        ) 
   
 #another way to change mislabelled IDs or typos
 #updating name and mass for 2 swapped standards (based on their isotope values and adjacent positions)
@@ -116,7 +123,7 @@ O.stds.table <- inner_join(run.stds, Standards, by = "Sample.ID") %>%
 data <- 
   raw.data %>% 
   filter(Nr. > 5) %>%
-  filter(file_datetime > "2022-01-28 02:00:00") %>% 
+  filter(file_datetime > "2022-02-16 00:00:00") %>% 
   group_by(row, file_id, Analysis, Identifier1, mass, type) %>% 
   summarize(
     num.peaks = n(),
@@ -206,6 +213,10 @@ sd.v.area44 <- ggplot(stdev, aes(x = area44, y = stdev, fill = factor(num.peaks)
   facet_grid(. ~ isotope)
 
 multiplot(sd.values, sd.hist, sd.box, sd.v.area44, cols = 1)
+
+
+
+
 ```
 
 Remove major outliers based on large standard deviation of peaks, then redo plots - also, adds culled data to "culled data" tab that shows samples and standards that shouldn't be used
@@ -276,6 +287,24 @@ yield.stds <- ggplot(stds, aes(x = mass, y = area44, label = Analysis)) +
   
 calc_std_means_d13C <- function(df) calc_means(df, "d13C.raw")
 
+std_area44 <- stds %>% 
+  pivot_longer(cols = c("d18O.sd", "d13C.sd"), values_to = "StandardDeviation") %>% 
+  filter(type != "lin.std") %>% 
+  ggplot() +
+    aes(
+      x = area44,
+      y = StandardDeviation,
+      fill = Identifier1,
+      size = 4
+    ) +
+    geom_point () +
+    facet_wrap(~name)
+
+ggplotly(std_area44, dynamicTicks = TRUE)
+
+
+
+
 d13C.stds <- 
   ggplot(stds, aes(label = Analysis)) +
   geom_hline(
@@ -320,7 +349,7 @@ dxf_files %>%
 ```{r plot.peaks.more}
 #If there are any additional chromatograms needed, just input the analysis numbers into the more.files list, replacing data$Analysis[5] with analysis number(s) - for example c(9536, 9655) instead of c(data$Analysis[5]). data$Analysis[5] is just acting as a stand-in to prevent errors if no additional analyses are selected
 
-more.files <- c(data3$Analysis[5])
+more.files <- c(data3$Analysis[23])
 
 plot.more <- filter(data, Analysis %in% more.files)
 
@@ -788,7 +817,7 @@ Assess effects: Apply offset correction to the whole dataset of linearity correc
 ```{r apply.offset.corr.O, fig.width = 10, fig.height = 5}
 
 #apply offset correction to whole dataset
-data$d18O.offset <- data$d18O.raw +  (filter(O.stds.table, std.type == "corr.std")$O.acc - offsetO.mean)
+data3$d18O.offset <- data3$d18O.raw +  (filter(O.stds.table, std.type == "corr.std")$O.acc - offsetO.mean)
 stds$d18O.offset <- stds$d18O.raw +  (filter(O.stds.table, std.type == "corr.std")$O.acc - offsetO.mean)
 
 #make monitoring standard dataset and dataset for additional standards used later for discrimination correction
@@ -870,7 +899,7 @@ multiplot(O.drift, O.drift.mass, cols = 2)
 
 Assess effects: Apply drift correction to the whole dataset of linearity corrected values, and check the monitoring standards
 ```{r apply.drift.corr.O, fig.width = 10, fig.height = 5}
-data$d18O.drift <- data$d18O.raw + (filter(O.stds.table, std.type == "corr.std")$O.acc - (drift.slopeO * data$row + drift.interO))
+data3$d18O.drift <- data3$d18O.raw + (filter(O.stds.table, std.type == "corr.std")$O.acc - (drift.slopeO * data3$row + drift.interO))
 stds$d18O.drift <- stds$d18O.raw + (filter(O.stds.table, std.type == "corr.std")$O.acc - (drift.slopeO * stds$row + drift.interO))
 
 driftO.mon <- filter(stds, type == "mon.std")
@@ -954,7 +983,7 @@ multiplot(O.lin.area44, O.lincorr.invarea, O.lin.mass, cols = 3)
 Assess effects: Apply linearity correction to the whole dataset of raw, and check the monitoring standards
 ```{r apply.lin.corr.O, fig.width=10, fig.height=5}
 
-data$d18O.lin <- data$d18O.raw +  (filter(O.stds.table, std.type == "corr.std")$O.acc - (lin.slopeO * data$inv.area44 + lin.interO))
+data3$d18O.lin <- data3$d18O.raw +  (filter(O.stds.table, std.type == "corr.std")$O.acc - (lin.slopeO * data3$inv.area44 + lin.interO))
 stds$d18O.lin <- stds$d18O.raw +  (filter(O.stds.table, std.type == "corr.std")$O.acc - (lin.slopeO * stds$inv.area44 + lin.interO))
 
 linO.mon <- filter(stds, type == "mon.std")
@@ -992,7 +1021,7 @@ multiplot(O.mon.lin, O.mon.lin.mass, cols=2)
 Because a run can be affected by both drift and linearity, here we assess the affects of apply both the linearity and drift corrections to the raw data. This uses the linearity corrected values, and looks at the drift in those values
 ```{r lindrift.O, fig.width=10, fig.height=5}
 
-lindriftO <- merge(driftO, data[c("row", "d18O.lin")], by.x = "row", by.y = "row", all.x = TRUE, all.y = FALSE, sort = FALSE)
+lindriftO <- merge(driftO, data3[c("row", "d18O.lin")], by.x = "row", by.y = "row", all.x = TRUE, all.y = FALSE, sort = FALSE)
 
 lindrift.slopeO <- (coef(lm(lindriftO$d18O.lin ~ lindriftO$row))[[2]])
 lindrift.interO <- (coef(lm(lindriftO$d18O.lin ~ lindriftO$row))[[1]])
@@ -1034,7 +1063,7 @@ multiplot(O.lindrift, O.lindrift.mass, cols = 2)
 
 Assess effects: Apply drift correction to the whole dataset of linearity corrected values, and check the monitoring standards
 ```{r apply.lindrift.corr.O, fig.width=10, fig.height=5}
-data$d18O.lindrift <- data$d18O.lin +  (filter(O.stds.table, std.type == "corr.std")$O.acc - (lindrift.slopeO * data$row + lindrift.interO))
+data3$d18O.lindrift <- data3$d18O.lin +  (filter(O.stds.table, std.type == "corr.std")$O.acc - (lindrift.slopeO * data3$row + lindrift.interO))
 stds$d18O.lindrift <- stds$d18O.lin +  (filter(O.stds.table, std.type == "corr.std")$O.acc - (lindrift.slopeO * stds$row + lindrift.interO))
 
 lindriftO.mon <- filter(stds, type == "mon.std") 
@@ -1091,7 +1120,7 @@ scale.corr <- left_join(scale.stds, O.scale.stds, by = "std.name") %>%
   rename(d18O = col_in_data)
 
 # safety checks
-if (!col_in_data %in% names(data)) stop("this column does not exist in data or stds table: ", col_in_data, call. = FALSE)
+if (!col_in_data %in% names(data3)) stop("this column does not exist in data or stds table: ", col_in_data, call. = FALSE)
 
 # regression
 m <- lm(scale.corr$O.acc ~ scale.corr$d18O)
@@ -1102,7 +1131,7 @@ S <- summary(m)$sigma
 d18O.error.S <- S
 
 # apply correction
-data <- data %>%
+data3 <- data3 %>%
   mutate_(d18O.scale = lazyeval::interp(~scale.slopeO * var + scale.interO, var = as.name(col_in_data)))
 stds <- stds %>%
   mutate_(d18O.scale = lazyeval::interp(~scale.slopeO * var + scale.interO, var = as.name(col_in_data)))
@@ -1110,7 +1139,7 @@ stds <- stds %>%
 O.scale.all <- 
   ggplot(scale.corr, aes(x = d18O, y = O.acc)) +
   geom_smooth(method = "lm", color = "blue") +
-  geom_point(data = filter(data, d18O.sd < d18O.sd.cutoff), aes_string(x = col_in_data, y = "d18O.scale"), shape = 23, fill = "red", size = 2) +
+  geom_point(data = filter(data3, d18O.sd < d18O.sd.cutoff), aes_string(x = col_in_data, y = "d18O.scale"), shape = 23, fill = "red", size = 2) +
   geom_point(shape = 21, fill = "blue", size = 2) +
   geom_text(
            x = max(scale.corr$d18O), 
@@ -1143,10 +1172,27 @@ O.stds.table$scaleO.sd <- c(sd(scaleO.corr$d18O.scale), scaleO.mon.sd, sd(scaleO
 ## label analyses that should not be used, with explanations for culling, label with values were used in the scale correction
 ```{r label-culled}
 #label as do not use
-#data[data$Analysis == xxxx, "Do_not_use"] <- "yes"     
+data3[data3$Analysis == 23325, "Do_not_use"] <- "yes"    
+data3[data3$Analysis == 23336, "Do_not_use"] <- "yes"  
+data3[data3$Analysis == 23367, "Do_not_use"] <- "yes"
+data3[data3$Analysis == 23366, "Do_not_use"] <- "yes"
+data3[data3$Analysis == 23365, "Do_not_use"] <- "yes"
+data3[data3$Analysis == 23359, "Do_not_use"] <- "yes"
+data3[data3$Analysis == 23341, "Do_not_use"] <- "yes"
+data3[data3$Analysis == 23340, "Do_not_use"] <- "yes"
 
 # label those samples with reason they were culled, in main dataset
-#data[data$Analysis == xxxx, "Why_culled"] <- "large between peak standard deviations (st)"     
+data3[data3$Analysis == 23325, "Why_culled"] <- "loose cap, high sd" 
+data3[data3$Analysis == 23336, "Why_culled"] <- "really higher d13C sd, huge peaks - likely pegged the detector" 
+data3[data3$Analysis == 23367, "Why_culled"] <- "Because of AS order error - didn't stab vial"
+data3[data3$Analysis == 23366, "Why_culled"] <- "Because of AS order error - didn't stab vial"
+data3[data3$Analysis == 23365, "Why_culled"] <- "Loose cap, high SD, atm "
+data3[data3$Analysis == 23359, "Why_culled"] <- "slightly high d18O sd (0.254), could probably be used"
+data3[data3$Analysis == 23341, "Why_culled"] <- " high d18O sd (0.5), could probably be used. small area 44"
+data3[data3$Analysis == 23340, "Why_culled"] <- " slightly high d18O sd (0.254), could probably be used. peaks look ok"
+
+
+
 #data[data$Analysis == xxxx, "Why_culled"] <- "high between peak stdev and/or big half peak could affect data?) (sa)"
 #data[data$Analysis == xxxx, "Why_culled"] <- "too small; smaller than linearity range (sa)"
 
@@ -1154,29 +1200,29 @@ O.stds.table$scaleO.sd <- c(sd(scaleO.corr$d18O.scale), scaleO.mon.sd, sd(scaleO
 #culled.data[culled.data$Analysis == xxxx, "Why_culled"] <- "large between peak standard deviations (st)"     
 
 #adds column that tells values used in the scale correction
-data$d13C_scale_input <- col_for_scale_C
-data$d18O_scale_input <- col_for_scale_O
-data$Run <- Run
+data3$d13C_scale_input <- col_for_scale_C
+data3$d18O_scale_input <- col_for_scale_O
+data3$Run <- Run
 
-data <- data %>% 
+data3 <- data3 %>% 
   mutate(d18O.error.S, d13C.error.S)
 
 # reorder columns for more readable order in output file
-data <- data %>%
+finaldata <- data3 %>%
   select(Run,row, file_id, Analysis, Identifier1, mass, type, num.peaks, area44, area44.sd, inv.area44, PercentCO3, d13C.raw, d13C.sd, d13C.offset, d13C.drift, d13C.lin, d13C.lindrift, d13C.scale, d13C.error.S, d13C_scale_input, d18O.raw.SMOW, d18O.sd, d18O.raw, d18O.offset, d18O.drift, d18O.lin, d18O.lindrift, d18O.scale,d18O.error.S, d18O_scale_input, Do_not_use, Why_culled)
 
 #creates subset of just samples with no culled or "do not use" entries
-samples <- data %>% 
+samples <- data3 %>% 
   filter(type == "sample") %>%
   filter(!(Identifier1 %in% culled.data)) %>% 
-  select(Run, Analysis, Identifier1, mass, d13C.scale, d13C.error.S, d18O.scale, d18O.error.S, PercentCO3, Do_not_use, Why_culled)
+  select(Run, Analysis, Identifier1, mass, d13C.scale, d13C.error.S, d18O.scale, d18O.error.S, PercentCO3, target.wgt.ug, Do_not_use, Why_culled)
 ```
 
 ## save data to spreadsheet
 ```{r save.data}
-add_ws_with_data <- function(wb, sheet, data) {
+add_ws_with_data <- function(wb, sheet, data3) {
   addWorksheet(wb, sheet)
-  writeData(wb, sheet=sheet, data)
+  writeData(wb, sheet=sheet, data3)
   return(wb)
 }
 
