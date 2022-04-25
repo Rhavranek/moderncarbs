@@ -51,7 +51,9 @@ library(stringr)
 library(openxlsx)
 library(plotly)
 library(isoreader)
-library(isoprocessCUBES) #if loading this package for the first time, be sure to install the "devtools" package first, then install the isoprocessCUBES package: devtools::install_github("CUBESSIL/isoprocessCUBES")
+library(isoprocessCUBES) 
+library(stringr)
+  #if loading this package for the first time, be sure to install the "devtools" package first, then install the isoprocessCUBES package: devtools::install_github("CUBESSIL/isoprocessCUBES")
 ```
 
 ## load data
@@ -1243,4 +1245,41 @@ wb <- add_ws_with_data(wb, "all stds used", stds)
 wb <- add_ws_with_data(wb, "culled data", culled.data)
 saveWorkbook(wb, paste0(session, "_corrected_data.xlsx"), overwrite = TRUE)
 ```
+
+# data plotting
+
+```{r}
+
+samples <- samples %>% 
+  mutate(
+    SoilSample = str_sub(Identifier1, 1,4) )
+  
+  
+
+plt1 <- samples %>% 
+  filter(Do_not_use != "yes") %>% 
+  ggplot()+
+  aes(x = d18O.scale, y = d13C.scale, color = SoilSample)+
+  geom_point()+
+  geom_errorbarh(aes(xmin = d18O.scale - d18O.error.S, xmax = d18O.scale + d18O.error.S )) +
+  geom_errorbar((aes(ymin = d13C.scale - d13C.error.S, ymax = d13C.scale + d13C.error.S)))
+
+ggplotly(plt1)
+
+
+plt2 <- samples %>% 
+  filter(Do_not_use != "yes") %>% 
+  ggplot()+
+  aes(x = d18O.scale, y = d13C.scale, color = Identifier1)+
+  geom_point()+
+  geom_errorbarh(aes(xmin = d18O.scale - d18O.error.S, xmax = d18O.scale + d18O.error.S )) +
+  geom_errorbar((aes(ymin = d13C.scale - d13C.error.S, ymax = d13C.scale + d13C.error.S)))
+
+ggplotly(plt2)
+
+
+multiplot(plt1, plt2)
+
+```
+
 
